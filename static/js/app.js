@@ -53,7 +53,7 @@ function switchView(target) {
 if (navTimeline) navTimeline.addEventListener("click", () => switchView("timeline"));
 if (navPost) navPost.addEventListener("click", () => switchView("post"));
 
-// 匿名スイッチでお名前欄トグル
+// 匿名スイッチでお名前欄表示/非表示
 if (postAnonymous && authorNameContainer) {
   postAnonymous.addEventListener("change", () => {
     if (postAnonymous.checked) {
@@ -122,7 +122,7 @@ function clearImage() {
   if (fileInput) fileInput.value = "";
 }
 
-// 画像添付イベント
+// ドロップ & クリック
 if (dropArea) {
   dropArea.addEventListener("click", (e) => {
     if (e.target.closest("#btn-remove-image")) return;
@@ -149,6 +149,7 @@ if (fileInput) {
   });
 }
 
+// Ctrl + V 直貼り
 window.addEventListener("paste", (e) => {
   const items = (e.clipboardData || window.clipboardData)?.items;
   if (!items) return;
@@ -186,7 +187,7 @@ if (postForm) {
       content: memo,
       author_name: author,
       is_anonymous: isAnon,
-      image_data: currentImageData // キー名を Python 側と統一
+      image_data: currentImageData
     };
 
     try {
@@ -231,7 +232,7 @@ async function loadPosts() {
   }
 }
 
-// 投稿一覧のレンダリング
+// 投稿一覧描画（コメント一覧＆入力フォーム含む）
 function renderPosts() {
   if (!timelineList) return;
   timelineList.innerHTML = "";
@@ -263,29 +264,29 @@ function renderPosts() {
       ? '<span class="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-700">解決済み</span>'
       : '<span class="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-700">未解決</span>';
 
-    // 回答リスト HTML 生成
-    const answers = post.answers || [];
-    let answersHtml = "";
-    if (answers.length > 0) {
-      answersHtml = `
-        <div class="space-y-2 mt-3 pt-3 border-t border-slate-100">
-          <p class="text-xs font-bold text-slate-500">💬 回答・コメント (${answers.length}件)</p>
-          <div class="space-y-2">
-            ${answers.map(ans => `
-              <div class="bg-slate-50 p-2.5 rounded-lg text-xs border border-slate-200">
-                <div class="flex justify-between items-center text-slate-500 mb-1">
-                  <span class="font-bold text-indigo-700">${escapeHtml(ans.author_name)}</span>
-                  <span>${new Date(ans.created_at).toLocaleString("ja-JP")}</span>
-                </div>
-                <p class="text-slate-700 whitespace-pre-wrap">${escapeHtml(ans.content)}</p>
+    // 複数人のコメント一覧生成
+    const comments = post.comments || [];
+    let commentsListHtml = "";
+    if (comments.length > 0) {
+      commentsListHtml = `
+        <div class="space-y-2 mt-2">
+          ${comments.map(c => `
+            <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs space-y-1">
+              <div class="flex justify-between items-center text-slate-500">
+                <span class="font-bold text-indigo-700">💬 ${escapeHtml(c.author_name)}</span>
+                <span class="text-[11px]">${new Date(c.created_at).toLocaleString("ja-JP")}</span>
               </div>
-            `).join("")}
-          </div>
+              <p class="text-slate-800 whitespace-pre-wrap leading-relaxed">${escapeHtml(c.content)}</p>
+            </div>
+          `).join("")}
         </div>
       `;
+    } else {
+      commentsListHtml = `<p class="text-xs text-slate-400 italic">まだコメントはありません。アドバイスや回答を書いてみましょう！</p>`;
     }
 
     card.innerHTML = `
+      <!-- ヘッダー情報 -->
       <div class="flex items-center justify-between pb-2 border-b border-slate-100">
         <div class="flex items-center gap-2">
           ${statusBadge}
@@ -297,61 +298,66 @@ function renderPosts() {
         </button>
       </div>
 
+      <!-- タイトルと本文 -->
       <div>
         <h3 class="text-base font-bold text-slate-800">${escapeHtml(post.title)}</h3>
         ${post.content ? `<p class="mt-1 text-slate-600 text-sm whitespace-pre-wrap leading-relaxed">${escapeHtml(post.content)}</p>` : ""}
       </div>
 
+      <!-- 添付画像（クリックで拡大） -->
       ${post.image_data ? `
         <div class="mt-2">
           <img src="${post.image_data}" alt="スクリーンショット" class="max-h-64 rounded-lg border border-slate-200 object-contain bg-slate-50 cursor-zoom-in hover:opacity-95 transition" onclick="openImageModal(this.src)">
         </div>
       ` : ""}
 
-      <!-- 回答一覧表示領域 -->
-      ${answersHtml}
+      <!-- コメントエリア -->
+      <div class="pt-3 border-t border-slate-100">
+        <h4 class="text-xs font-bold text-slate-600 mb-2">💬 コメント・アドバイス (${comments.length})</h4>
+        ${commentsListHtml}
 
-      <!-- 回答入力フォーム -->
-      <form onsubmit="submitAnswer(event, '${post.id}')" class="mt-3 pt-3 border-t border-slate-100 flex flex-col gap-2">
-        <div class="flex gap-2">
-          <input type="text" id="ans-author-${post.id}" placeholder="お名前 (省略可)" class="w-1/3 px-2 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500">
-          <input type="text" id="ans-content-${post.id}" required placeholder="回答やアドバイスを入力..." class="flex-1 px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500">
-          <button type="submit" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-lg transition whitespace-nowrap">回答する</button>
-        </div>
-      </form>
+        <!-- コメント入力フォーム -->
+        <form onsubmit="submitComment(event, '${post.id}')" class="mt-3 flex flex-col sm:flex-row gap-2">
+          <input type="text" id="comment-author-${post.id}" placeholder="お名前 (任意)" class="sm:w-32 px-2.5 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500">
+          <input type="text" id="comment-content-${post.id}" required placeholder="コメント・アドバイスを入力..." class="flex-1 px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500">
+          <button type="submit" class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-lg transition whitespace-nowrap shadow-sm">
+            コメントする
+          </button>
+        </form>
+      </div>
     `;
 
     timelineList.appendChild(card);
   });
 }
 
-// 回答送信処理
-window.submitAnswer = async function(event, postId) {
+// コメント送信処理
+window.submitComment = async function(event, postId) {
   event.preventDefault();
-  const authorInput = document.getElementById(`ans-author-${postId}`);
-  const contentInput = document.getElementById(`ans-content-${postId}`);
-  
+  const authorInput = document.getElementById(`comment-author-${postId}`);
+  const contentInput = document.getElementById(`comment-content-${postId}`);
+
   const content = contentInput.value.trim();
   const author = authorInput.value.trim() || "社内スタッフ";
   if (!content) return;
 
   try {
-    const res = await fetch(`/api/posts/${postId}/answers`, {
+    const res = await fetch(`/api/posts/${postId}/comments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ author_name: author, content: content })
     });
-    if (!res.ok) throw new Error("回答の送信に失敗しました");
-    
+    if (!res.ok) throw new Error("コメント送信失敗");
+
     contentInput.value = "";
-    await loadPosts();
+    await loadPosts(); // 一覧を再取得して追加されたコメントを反映
   } catch (err) {
     console.error(err);
-    alert("回答を送信できませんでした。");
+    alert("コメントの送信に失敗しました。");
   }
 };
 
-// 解決・未解決切り替え
+// 解決/未解決切り替え
 window.toggleResolved = async function(postId) {
   try {
     const res = await fetch(`/api/posts/${postId}/resolve`, { method: "POST" });
@@ -362,7 +368,7 @@ window.toggleResolved = async function(postId) {
   }
 };
 
-// フィルター切り替え
+// フィルタ切り替え
 filterTabs.forEach((tab) => {
   tab.addEventListener("click", () => {
     currentFilter = tab.getAttribute("data-filter");
