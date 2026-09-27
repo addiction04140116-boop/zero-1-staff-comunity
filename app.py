@@ -8,7 +8,7 @@ from flask import Flask, request, jsonify, render_template
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 
-# Railway が自動付与する接続URL（無ければローカル用などのフォールバック）
+# Railway環境変数（PostgreSQL接続先）
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 def get_db_connection():
@@ -23,7 +23,6 @@ def init_db():
         return
     conn = get_db_connection()
     cur = conn.cursor()
-    # 投稿テーブル (TEXT型で大容量のBase64画像も保存可能)
     cur.execute("""
         CREATE TABLE IF NOT EXISTS posts (
             id VARCHAR(50) PRIMARY KEY,
@@ -41,7 +40,6 @@ def init_db():
     cur.close()
     conn.close()
 
-# 起動時にテーブルを作成
 try:
     init_db()
 except Exception as e:
@@ -118,10 +116,10 @@ def create_post():
             "created_at": created_at.isoformat()
         }), 201
     except Exception as e:
-        print(f"作成エラー: {e}")
+        print(f"投稿作成エラー: {e}")
         return jsonify({"error": "保存に失敗しました"}), 500
 
-# 解決/未解決の切り替え
+# 解決/未解決ステータス切り替え
 @app.route("/api/posts/<post_id>/resolve", methods=["POST"])
 def toggle_resolve(post_id):
     try:
@@ -145,7 +143,27 @@ def toggle_resolve(post_id):
         print(f"ステータス更新エラー: {e}")
         return jsonify({"error": "更新失敗"}), 500
 
-# 複数人コメントの追加
+# 投稿の完全削除API
+@app.route("/api/posts/<post_id>", methods=["DELETE"])
+def delete_post(post_id):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM posts WHERE id = %s;", (post_id,))
+        conn.commit()
+        rows_deleted = cur.rowcount
+        cur.close()
+        conn.close()
+
+        if rows_deleted == 0:
+            return jsonify({"error": "投稿が見つかりません"}), 404
+
+        return jsonify({"message": "投稿を削除しました", "id": post_id}), 200
+    except Exception as e:
+        print(f"投稿削除エラー: {e}")
+        return jsonify({"error": "削除に失敗しました"}), 500
+
+# コメント追加API
 @app.route("/api/posts/<post_id>/comments", methods=["POST"])
 def add_comment(post_id):
     data = request.get_json() or {}
@@ -163,7 +181,6 @@ def add_comment(post_id):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        # JSON配列の末尾に新しいコメントを追加
         cur.execute("""
             UPDATE posts
             SET comments = COALESCE(comments, '[]'::jsonb) || %s::jsonb
@@ -177,6 +194,36 @@ def add_comment(post_id):
     except Exception as e:
         print(f"コメント追加エラー: {e}")
         return jsonify({"error": "コメント保存失敗"}), 500
+
+# 個別コメント削除API
+@app.route("/api/posts/<post_id>/comments/<comment_id>", methods=["DELETE"])
+def delete_comment(post_id, comment_id):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("SELECT comments FROM posts WHERE id = %s;", (post_id,))
+        post = cur.fetchone()
+        if not post:
+            cur.close()
+            conn.close()
+            return jsonify({"error": "投稿が見つかりません"}), 404
+
+        current_comments = post.get("comments") or []
+        new_comments = [c for c in current_comments if c.get("id") != comment_id]
+
+        cur.execute("""
+            UPDATE posts
+            SET comments = %s::jsonb
+            WHERE id = %s;
+        """, (json.dumps(new_comments), post_id))
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        return jsonify({"message": "コメントを削除しました", "comment_id": comment_id}), 200
+    except Exception as e:
+        print(f"コメント削除エラー: {e}")
+        return jsonify({"error": "コメント削除失敗"}), 500
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))

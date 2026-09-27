@@ -105,7 +105,6 @@ function compressImage(file, maxWidth = 1200, quality = 0.8) {
   });
 }
 
-// 画像ファイル読み込み処理
 async function handleImageFile(file) {
   if (!file || !file.type.startsWith("image/")) return;
   try {
@@ -118,7 +117,6 @@ async function handleImageFile(file) {
   }
 }
 
-// プレビュー画像のクリア
 function clearImage() {
   currentImageData = null;
   if (imagePreview) imagePreview.src = "";
@@ -127,7 +125,7 @@ function clearImage() {
   if (fileInput) fileInput.value = "";
 }
 
-// 画像添付関連のイベントリスナー
+// 画像添付イベント
 if (dropArea && fileInput) {
   dropArea.addEventListener("click", (e) => {
     if (e.target.closest("#btn-remove-image")) return;
@@ -245,7 +243,7 @@ async function loadPosts() {
   }
 }
 
-// 投稿一覧描画（コメント欄＆スマホレスポンシブ対応）
+// 投稿一覧描画（コメント欄＆削除機能含む）
 function renderPosts() {
   if (!timelineList) return;
   timelineList.innerHTML = "";
@@ -277,7 +275,7 @@ function renderPosts() {
       ? '<span class="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-700">解決済み</span>'
       : '<span class="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-700">未解決</span>';
 
-    // 複数人のコメント一覧生成
+    // 複数人のコメント一覧生成（個別削除ボタン付き）
     const comments = post.comments || [];
     let commentsListHtml = "";
     if (comments.length > 0) {
@@ -287,7 +285,12 @@ function renderPosts() {
             <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs space-y-1">
               <div class="flex justify-between items-center text-slate-500">
                 <span class="font-bold text-indigo-700">💬 ${escapeHtml(c.author_name || "社内スタッフ")}</span>
-                <span class="text-[11px]">${c.created_at ? new Date(c.created_at).toLocaleString("ja-JP") : ""}</span>
+                <div class="flex items-center gap-2">
+                  <span class="text-[11px]">${c.created_at ? new Date(c.created_at).toLocaleString("ja-JP") : ""}</span>
+                  <button onclick="deleteComment('${post.id}', '${c.id}')" class="text-slate-400 hover:text-red-500 font-bold px-1 transition" title="このコメントを削除">
+                    ✕
+                  </button>
+                </div>
               </div>
               <p class="text-slate-800 whitespace-pre-wrap leading-relaxed">${escapeHtml(c.content)}</p>
             </div>
@@ -305,9 +308,15 @@ function renderPosts() {
           <span class="text-xs font-medium text-slate-600">${authorName}</span>
           ${dateStr ? `<span class="text-[11px] text-slate-400">• ${dateStr}</span>` : ""}
         </div>
-        <button onclick="toggleResolved('${post.id}')" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium hover:underline shrink-0 ml-2">
-          ${post.is_resolved ? "未解決に戻す" : "解決済みにする"}
-        </button>
+        <div class="flex items-center gap-2 shrink-0 ml-2">
+          <button onclick="toggleResolved('${post.id}')" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium hover:underline">
+            ${post.is_resolved ? "未解決に戻す" : "解決済みにする"}
+          </button>
+          <span class="text-slate-300 text-xs">|</span>
+          <button onclick="deletePost('${post.id}')" class="text-xs text-red-500 hover:text-red-700 font-medium hover:underline" title="投稿を削除">
+            🗑️ 削除
+          </button>
+        </div>
       </div>
 
       <div>
@@ -341,6 +350,21 @@ function renderPosts() {
   });
 }
 
+// 投稿削除処理
+window.deletePost = async function(postId) {
+  const confirmed = confirm("この投稿を削除しますか？\n（関連するコメントや画像もすべてサーバーから削除されます）");
+  if (!confirmed) return;
+
+  try {
+    const res = await fetch(`/api/posts/${postId}`, { method: "DELETE" });
+    if (!res.ok) throw new Error("削除失敗");
+    await loadPosts();
+  } catch (err) {
+    console.error(err);
+    alert("投稿の削除に失敗しました。");
+  }
+};
+
 // コメント送信処理
 window.submitComment = async function(event, postId) {
   event.preventDefault();
@@ -367,7 +391,22 @@ window.submitComment = async function(event, postId) {
   }
 };
 
-// 解決/未解決の切り替え
+// 個別コメント削除処理
+window.deleteComment = async function(postId, commentId) {
+  const confirmed = confirm("このコメントを削除しますか？");
+  if (!confirmed) return;
+
+  try {
+    const res = await fetch(`/api/posts/${postId}/comments/${commentId}`, { method: "DELETE" });
+    if (!res.ok) throw new Error("コメント削除失敗");
+    await loadPosts();
+  } catch (err) {
+    console.error(err);
+    alert("コメントの削除に失敗しました。");
+  }
+};
+
+// 解決/未解決ステータス切り替え
 window.toggleResolved = async function(postId) {
   try {
     const res = await fetch(`/api/posts/${postId}/resolve`, { method: "POST" });
@@ -378,7 +417,7 @@ window.toggleResolved = async function(postId) {
   }
 };
 
-// フィルタ切り替え
+// フィルター切り替え
 filterTabs.forEach((tab) => {
   tab.addEventListener("click", () => {
     currentFilter = tab.getAttribute("data-filter");
@@ -410,7 +449,6 @@ if (imageModal) {
   });
 }
 
-// XSS対策
 function escapeHtml(str) {
   if (!str) return "";
   return String(str).replace(/[&<>'"]/g, 
@@ -418,5 +456,4 @@ function escapeHtml(str) {
   );
 }
 
-// 初期ロード
 loadPosts();
