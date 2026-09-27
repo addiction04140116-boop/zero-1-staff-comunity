@@ -13,12 +13,7 @@ app = Flask(
 )
 
 # --- 保存用ディレクトリとJSONファイルの準備 ---
-# Vercel環境(/tmp)またはローカル環境を自動判別
-if os.environ.get("VERCEL"):
-    DATA_DIR = "/tmp"
-else:
-    DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
-
+DATA_DIR = os.path.join(BASE_DIR, "data")
 DATA_FILE = os.path.join(DATA_DIR, "posts.json")
 os.makedirs(DATA_DIR, exist_ok=True)
 
@@ -48,7 +43,6 @@ def index():
 @app.route("/api/posts", methods=["GET"])
 def get_posts():
     posts = load_posts()
-    # 新しい投稿順に並び替え
     posts.sort(key=lambda x: x.get("created_at", ""), reverse=True)
     return jsonify(posts)
 
@@ -87,7 +81,7 @@ def create_post():
     return jsonify(new_post), 201
 
 
-@app.route("/api/posts/<post_id>/resolve", methods=["PATCH"])
+@app.route("/api/posts/<post_id>/resolve", methods=["PATCH", "POST"])
 def toggle_resolve(post_id):
     posts = load_posts()
     target = None
