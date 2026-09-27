@@ -133,3 +133,8 @@ def add_comment(post_id):
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
+
+if __name__ == "__main__":
+    # Railwayの本番ポート環境変数(PORT)があればそれを使い、なければローカル用に5000を使う
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=True)
