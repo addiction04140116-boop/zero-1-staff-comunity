@@ -6,8 +6,13 @@ from flask import Flask, jsonify, render_template, request
 
 app = Flask(__name__)
 
-# 保存用ディレクトリとJSONファイルの準備
-DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+# --- 保存用ディレクトリとJSONファイルの準備 ---
+# Vercel環境(/tmp)またはローカル環境を自動判別
+if os.environ.get("VERCEL"):
+    DATA_DIR = "/tmp"
+else:
+    DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+
 DATA_FILE = os.path.join(DATA_DIR, "posts.json")
 os.makedirs(DATA_DIR, exist_ok=True)
 
