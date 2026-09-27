@@ -1,28 +1,30 @@
 // ==========================================
-// SES ナレッジ＆スクショ共有ボード app.js 完全版
+// SES ナレッジ＆スクショ共有ボード - app.js
 // ==========================================
 
 // --- 状態管理 ---
 let currentImageData = null;
 let currentFilter = "all";
-let cachedPosts = [];
+let allPosts = [];
 
 // --- DOM 要素の取得 ---
-// ナビゲーション & ビュー
+// ナビゲーション & ビュー切り替え
 const navTimeline = document.getElementById("nav-timeline");
 const navPost = document.getElementById("nav-post");
 const viewTimeline = document.getElementById("view-timeline");
 const viewPost = document.getElementById("view-post");
 
-// 投稿フォーム関連
+// フォーム要素
 const postForm = document.getElementById("post-form");
+const postAuthor = document.getElementById("post-author");
+const authorNameContainer = document.getElementById("author-name-container");
 const postTitle = document.getElementById("post-title");
 const postMemo = document.getElementById("post-memo");
 const charCounter = document.getElementById("char-counter");
 const postAnonymous = document.getElementById("post-anonymous");
 const btnSubmit = document.getElementById("btn-submit");
 
-// 画像アップロード・プレビュー関連
+// 画像アップロード・プレビュー要素
 const dropArea = document.getElementById("drop-area");
 const dropPrompt = document.getElementById("drop-prompt");
 const fileInput = document.getElementById("file-input");
@@ -30,32 +32,30 @@ const imagePreviewContainer = document.getElementById("image-preview-container")
 const imagePreview = document.getElementById("image-preview");
 const btnRemoveImage = document.getElementById("btn-remove-image");
 
-// タイムライン・一覧関連
+// タイムライン・フィルター
 const timelineList = document.getElementById("timeline-list");
 const filterTabs = document.querySelectorAll(".filter-tab");
 
-// 画像拡大モーダル関連
+// 画像モーダル
 const imageModal = document.getElementById("image-modal");
 const modalImg = document.getElementById("modal-img");
 const btnCloseModal = document.getElementById("btn-close-modal");
 
 
 // ==========================================
-// 1. ビュー（画面）切り替え処理
+// 画面切り替え（タイムライン / 投稿）
 // ==========================================
-function switchView(targetView) {
-  if (targetView === "post") {
+function switchView(target) {
+  if (target === "post") {
     viewPost.classList.remove("hidden");
     viewTimeline.classList.add("hidden");
 
-    // ボタンのスタイル切り替え
     navPost.className = "nav-btn px-4 py-1.5 rounded-full font-medium text-sm transition bg-white text-indigo-700 shadow";
     navTimeline.className = "nav-btn px-4 py-1.5 rounded-full font-medium text-sm transition text-indigo-100 hover:bg-indigo-500";
   } else {
     viewTimeline.classList.remove("hidden");
     viewPost.classList.add("hidden");
 
-    // ボタンのスタイル切り替え
     navTimeline.className = "nav-btn px-4 py-1.5 rounded-full font-medium text-sm transition bg-white text-indigo-700 shadow";
     navPost.className = "nav-btn px-4 py-1.5 rounded-full font-medium text-sm transition text-indigo-100 hover:bg-indigo-500";
   }
@@ -66,13 +66,27 @@ if (navPost) navPost.addEventListener("click", () => switchView("post"));
 
 
 // ==========================================
-// 2. 文字数カウンター
+// 匿名トグル連動（お名前入力欄の表示/非表示）
+// ==========================================
+if (postAnonymous && authorNameContainer) {
+  postAnonymous.addEventListener("change", () => {
+    if (postAnonymous.checked) {
+      authorNameContainer.classList.add("hidden");
+    } else {
+      authorNameContainer.classList.remove("hidden");
+    }
+  });
+}
+
+
+// ==========================================
+// メモ文字数カウンター
 // ==========================================
 if (postMemo && charCounter) {
   postMemo.addEventListener("input", () => {
-    const count = postMemo.value.length;
-    charCounter.textContent = `${count} / 100文字`;
-    if (count >= 100) {
+    const len = postMemo.value.length;
+    charCounter.textContent = `${len} / 100文字`;
+    if (len >= 100) {
       charCounter.classList.add("text-red-500");
     } else {
       charCounter.classList.remove("text-red-500");
@@ -82,10 +96,10 @@ if (postMemo && charCounter) {
 
 
 // ==========================================
-// 3. 画像処理（圧縮・プレビュー・D&D・ペースト）
+// 画像圧縮 & プレビュー表示
 // ==========================================
 function compressImage(file, maxWidth = 1200, quality = 0.8) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = (event) => {
@@ -109,17 +123,24 @@ function compressImage(file, maxWidth = 1200, quality = 0.8) {
         const compressedDataUrl = canvas.toDataURL("image/jpeg", quality);
         resolve(compressedDataUrl);
       };
+      img.onerror = (err) => reject(err);
     };
+    reader.onerror = (err) => reject(err);
   });
 }
 
 async function handleImageFile(file) {
   if (!file || !file.type.startsWith("image/")) return;
 
-  currentImageData = await compressImage(file);
-  imagePreview.src = currentImageData;
-  imagePreviewContainer.classList.remove("hidden");
-  dropPrompt.classList.add("hidden");
+  try {
+    currentImageData = await compressImage(file);
+    imagePreview.src = currentImageData;
+    imagePreviewContainer.classList.remove("hidden");
+    dropPrompt.classList.add("hidden");
+  } catch (err) {
+    console.error("画像圧縮エラー:", err);
+    alert("画像の読み込みに失敗しました。");
+  }
 }
 
 function clearImage() {
@@ -130,10 +151,13 @@ function clearImage() {
   if (fileInput) fileInput.value = "";
 }
 
-// ドロップ領域クリックでファイル選択ダイアログを開く
+
+// ==========================================
+// 画像選択・ドロップ・ペーストイベント
+// ==========================================
+// クリックでファイル選択を開く
 if (dropArea) {
   dropArea.addEventListener("click", (e) => {
-    // 削除ボタン押下時はダイアログを開かない
     if (e.target.closest("#btn-remove-image")) return;
     if (fileInput) fileInput.click();
   });
@@ -158,7 +182,7 @@ if (dropArea) {
   });
 }
 
-// ファイル選択時
+// ファイル選択後
 if (fileInput) {
   fileInput.addEventListener("change", (e) => {
     if (e.target.files.length > 0) {
@@ -167,9 +191,9 @@ if (fileInput) {
   });
 }
 
-// クリップボードからの画像貼り付け (Ctrl + V)
+// Ctrl + V 直貼り
 window.addEventListener("paste", (e) => {
-  const items = (e.clipboardData || e.originalEvent.clipboardData)?.items;
+  const items = (e.clipboardData || window.clipboardData)?.items;
   if (!items) return;
 
   for (let item of items) {
@@ -191,7 +215,7 @@ if (btnRemoveImage) {
 
 
 // ==========================================
-// 4. 投稿送信処理
+// 投稿フォーム送信
 // ==========================================
 if (postForm) {
   postForm.addEventListener("submit", async (e) => {
@@ -199,24 +223,24 @@ if (postForm) {
 
     const title = postTitle.value.trim();
     const memo = postMemo.value.trim();
+    const isAnon = postAnonymous ? postAnonymous.checked : false;
+    const author = isAnon ? "匿名スタッフ" : (postAuthor?.value.trim() || "社内スタッフ");
 
     if (!title) {
       alert("タイトルを入力してください");
       return;
     }
 
+    btnSubmit.disabled = true;
+    btnSubmit.textContent = "送信中...";
+
     const payload = {
       title: title,
       content: memo,
-      is_anonymous: postAnonymous.checked,
+      author_name: author,
+      is_anonymous: isAnon,
       image_data: currentImageData
     };
-
-    // 二重送信防止
-    if (btnSubmit) {
-      btnSubmit.disabled = true;
-      btnSubmit.textContent = "投稿中...";
-    }
 
     try {
       const res = await fetch("/api/posts", {
@@ -225,47 +249,50 @@ if (postForm) {
         body: JSON.stringify(payload)
       });
 
-      if (res.ok) {
-        // フォームリセット
-        postTitle.value = "";
-        postMemo.value = "";
-        postAnonymous.checked = false;
-        if (charCounter) charCounter.textContent = "0 / 100文字";
-        clearImage();
-
-        // タイムライン画面に遷移して最新取得
-        switchView("timeline");
-        loadPosts();
-      } else {
-        alert("投稿に失敗しました。時間をおいて再試行してください。");
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
       }
+
+      // 入力欄のクリア
+      postTitle.value = "";
+      postMemo.value = "";
+      if (postAuthor) postAuthor.value = "";
+      if (postAnonymous) {
+        postAnonymous.checked = false;
+        authorNameContainer.classList.remove("hidden");
+      }
+      if (charCounter) charCounter.textContent = "0 / 100文字";
+      clearImage();
+
+      // タイムラインへ切り替えて一覧再読み込み
+      switchView("timeline");
+      await loadPosts();
     } catch (err) {
       console.error("投稿の送信に失敗しました:", err);
-      alert("ネットワークエラーが発生しました。");
+      alert("投稿に失敗しました。サーバー側の通信状態を確認してください。");
     } finally {
-      if (btnSubmit) {
-        btnSubmit.disabled = false;
-        btnSubmit.textContent = "この内容で投稿する";
-      }
+      btnSubmit.disabled = false;
+      btnSubmit.textContent = "この内容で投稿する";
     }
   });
 }
 
 
 // ==========================================
-// 5. タイムライン表示・フィルター処理
+// 投稿一覧取得 & 描画
 // ==========================================
 async function loadPosts() {
   try {
     const res = await fetch("/api/posts");
-    cachedPosts = await res.json();
+    if (!res.ok) throw new Error("一覧取得に失敗しました");
+    allPosts = await res.json();
     renderPosts();
   } catch (err) {
     console.error("投稿の読み込みに失敗しました:", err);
     if (timelineList) {
       timelineList.innerHTML = `
-        <div class="text-center py-12 text-rose-500 bg-white rounded-xl shadow-sm border border-rose-100">
-          投稿の読み込みに失敗しました。サーバーが起動しているか確認してください。
+        <div class="text-center py-12 text-red-500 bg-white rounded-xl shadow-sm border border-slate-100">
+          投稿の読み込みに失敗しました。
         </div>
       `;
     }
@@ -276,7 +303,7 @@ function renderPosts() {
   if (!timelineList) return;
   timelineList.innerHTML = "";
 
-  const filteredPosts = cachedPosts.filter((post) => {
+  const filteredPosts = allPosts.filter((post) => {
     if (currentFilter === "all") return true;
     if (currentFilter === "unresolved") return !post.is_resolved;
     if (currentFilter === "resolved") return post.is_resolved;
@@ -286,7 +313,7 @@ function renderPosts() {
 
   if (filteredPosts.length === 0) {
     timelineList.innerHTML = `
-      <div class="text-center py-12 text-slate-400 bg-white rounded-xl shadow-sm border border-slate-200">
+      <div class="text-center py-12 text-slate-400 bg-white rounded-xl shadow-sm border border-slate-100">
         該当する投稿がありません。
       </div>
     `;
@@ -298,44 +325,65 @@ function renderPosts() {
     card.className = "bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-3";
 
     const dateStr = post.created_at ? new Date(post.created_at).toLocaleString("ja-JP") : "";
-    const authorName = post.is_anonymous ? "🕶️ 匿名スタッフ" : "👤 社内メンバー";
+    
+    // 匿名フラグとお名前の判定
+    const authorName = post.is_anonymous 
+      ? "🕶️ 匿名スタッフ" 
+      : `👤 ${escapeHtml(post.author_name || "社内スタッフ")}`;
+
     const statusBadge = post.is_resolved
       ? '<span class="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-700">解決済み</span>'
       : '<span class="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-700">未解決</span>';
 
+    const memoContent = post.content || post.memo || "";
+
     card.innerHTML = `
       <div class="flex items-center justify-between pb-2 border-b border-slate-100">
-        <div class="flex items-center gap-2 flex-wrap">
+        <div class="flex items-center gap-2">
           ${statusBadge}
           <span class="text-xs font-medium text-slate-600">${authorName}</span>
           ${dateStr ? `<span class="text-xs text-slate-400">• ${dateStr}</span>` : ""}
         </div>
-        <button onclick="toggleResolved('${post.id}')" class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold px-2 py-1 rounded hover:bg-indigo-50 transition">
+        <button onclick="toggleResolved('${post.id}')" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium hover:underline">
           ${post.is_resolved ? "未解決に戻す" : "解決済みにする"}
         </button>
       </div>
 
       <div>
         <h3 class="text-base font-bold text-slate-800">${escapeHtml(post.title)}</h3>
-        ${post.content ? `<p class="mt-1.5 text-slate-600 text-sm whitespace-pre-wrap leading-relaxed">${escapeHtml(post.content)}</p>` : ""}
+        ${memoContent ? `<p class="mt-1 text-slate-600 text-sm whitespace-pre-wrap leading-relaxed">${escapeHtml(memoContent)}</p>` : ""}
       </div>
 
       ${post.image_data ? `
-        <div class="mt-3">
-          <img src="${post.image_data}" alt="添付画像" class="max-h-72 rounded-lg border border-slate-200 object-contain bg-slate-50 cursor-pointer hover:opacity-95 transition" onclick="openModal('${post.image_data}')">
+        <div class="mt-2">
+          <img src="${post.image_data}" alt="スクリーンショット" class="max-h-64 rounded-lg border border-slate-200 object-contain bg-slate-50 cursor-zoom-in hover:opacity-95 transition" onclick="openImageModal(this.src)">
         </div>
       ` : ""}
     `;
+
     timelineList.appendChild(card);
   });
 }
 
+// 解決・未解決の切り替え
+window.toggleResolved = async function(postId) {
+  try {
+    const res = await fetch(`/api/posts/${postId}/resolve`, { method: "POST" });
+    if (!res.ok) throw new Error("更新失敗");
+    await loadPosts();
+  } catch (err) {
+    console.error("ステータス更新に失敗しました:", err);
+  }
+};
+
+
+// ==========================================
 // フィルタータブ切り替え
+// ==========================================
 filterTabs.forEach((tab) => {
   tab.addEventListener("click", () => {
     currentFilter = tab.getAttribute("data-filter");
 
-    // タブのアクティブスタイル更新
     filterTabs.forEach((t) => {
       t.className = "filter-tab px-3 py-1 rounded-lg text-slate-600 hover:bg-slate-100";
     });
@@ -345,55 +393,39 @@ filterTabs.forEach((tab) => {
   });
 });
 
-// 解決ステータス切り替え
-window.toggleResolved = async function (postId) {
-  try {
-    const res = await fetch(`/api/posts/${postId}/resolve`, { method: "POST" });
-    if (res.ok) {
-      loadPosts();
-    }
-  } catch (err) {
-    console.error("ステータス更新に失敗しました:", err);
-  }
-};
-
 
 // ==========================================
-// 6. 画像モーダル機能
+// 画像拡大モーダル
 // ==========================================
-window.openModal = function (src) {
+window.openImageModal = function(src) {
   if (!imageModal || !modalImg) return;
   modalImg.src = src;
   imageModal.classList.remove("hidden");
 };
 
-function closeModal() {
-  if (!imageModal || !modalImg) return;
+function closeImageModal() {
+  if (!imageModal) return;
   imageModal.classList.add("hidden");
-  modalImg.src = "";
+  if (modalImg) modalImg.src = "";
 }
 
-if (btnCloseModal) btnCloseModal.addEventListener("click", closeModal);
+if (btnCloseModal) btnCloseModal.addEventListener("click", closeImageModal);
 if (imageModal) {
   imageModal.addEventListener("click", (e) => {
-    if (e.target === imageModal) closeModal();
+    if (e.target === imageModal) closeImageModal();
   });
 }
 
 
 // ==========================================
-// 7. ユーティリティ
+// XSS対策エスケープ関数
 // ==========================================
 function escapeHtml(str) {
   if (!str) return "";
-  return str.replace(/[&<>'"]/g, (tag) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    "'": "&#39;",
-    '"': "&quot;"
-  }[tag] || tag));
+  return String(str).replace(/[&<>'"]/g, 
+    tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+  );
 }
 
-// 初回ロード実行
+// 初回投稿データ取得
 loadPosts();
