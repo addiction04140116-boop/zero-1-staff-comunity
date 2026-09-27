@@ -4,7 +4,13 @@ import uuid
 from datetime import datetime
 from flask import Flask, jsonify, render_template, request
 
-app = Flask(__name__)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+app = Flask(
+    __name__,
+    template_folder=os.path.join(BASE_DIR, "templates"),
+    static_folder=os.path.join(BASE_DIR, "static"),
+)
 
 # --- 保存用ディレクトリとJSONファイルの準備 ---
 # Vercel環境(/tmp)またはローカル環境を自動判別
