@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>SES ナレッジ＆スクショ共有ボード</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -10,22 +10,22 @@
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col font-sans">
 
-  <!-- ヘッダー -->
+  <!-- ヘッダー (スマホ時は折り返し対応) -->
   <header class="bg-indigo-600 text-white shadow-md sticky top-0 z-30">
-    <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+    <div class="max-w-4xl mx-auto px-4 py-2.5 sm:py-3 flex flex-wrap items-center justify-between gap-2">
       <div class="flex items-center space-x-2">
-        <span class="text-2xl">💡</span>
+        <span class="text-xl sm:text-2xl">💡</span>
         <div>
-          <h1 class="font-bold text-lg leading-tight">SES ナレッジ共有ボード</h1>
-          <p class="text-xs text-indigo-200">ちょっとした疑問や現場のスクショを手軽に共有</p>
+          <h1 class="font-bold text-base sm:text-lg leading-tight">SES ナレッジ共有ボード</h1>
+          <p class="text-[10px] sm:text-xs text-indigo-200">ちょっとした疑問や現場のスクショを手軽に共有</p>
         </div>
       </div>
-      <!-- ナビゲーション切り替えボタン -->
-      <nav class="flex space-x-2">
-        <button id="nav-timeline" class="nav-btn px-4 py-1.5 rounded-full font-medium text-sm transition bg-white text-indigo-700 shadow">
+      <!-- ナビゲーションボタン -->
+      <nav class="flex space-x-1.5 sm:space-x-2 ml-auto">
+        <button id="nav-timeline" class="nav-btn px-3 sm:px-4 py-1.5 rounded-full font-medium text-xs sm:text-sm transition bg-white text-indigo-700 shadow">
           タイムライン
         </button>
-        <button id="nav-post" class="nav-btn px-4 py-1.5 rounded-full font-medium text-sm transition text-indigo-100 hover:bg-indigo-500">
+        <button id="nav-post" class="nav-btn px-3 sm:px-4 py-1.5 rounded-full font-medium text-xs sm:text-sm transition text-indigo-100 hover:bg-indigo-500">
           ＋ 投稿する
         </button>
       </nav>
@@ -33,93 +33,94 @@
   </header>
 
   <!-- メインコンテンツ領域 -->
-  <main class="max-w-4xl w-full mx-auto px-4 py-6 flex-1">
+  <main class="max-w-4xl w-full mx-auto px-3 sm:px-4 py-4 sm:py-6 flex-1">
 
     <!-- 投稿画面 (初期状態は非表示) -->
     <section id="view-post" class="hidden">
-      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 max-w-xl mx-auto">
-        <h2 class="text-lg font-bold text-slate-700 mb-4 pb-2 border-b">なんでも相談を投稿する</h2>
+      <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200 max-w-xl mx-auto">
+        <h2 class="text-base sm:text-lg font-bold text-slate-700 mb-4 pb-2 border-b">疑問やエラーをストック・投稿する</h2>
 
         <!-- 匿名トグル -->
-        <div class="mb-5 flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
-          <div>
-            <span class="font-semibold text-sm text-slate-700 block">🕶️ 匿名で投稿する</span>
-            <span class="text-xs text-slate-500">初歩的な疑問や現場の悩みも安心して投稿できます</span>
+        <div class="mb-4 sm:mb-5 flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
+          <div class="pr-2">
+            <span class="font-semibold text-xs sm:text-sm text-slate-700 block">🕶️ 匿名で投稿する</span>
+            <span class="text-[11px] sm:text-xs text-slate-500">初歩的な疑問や悩みも安心して投稿できます</span>
           </div>
-          <label class="relative inline-flex items-center cursor-pointer">
+          <label class="relative inline-flex items-center cursor-pointer shrink-0">
             <input type="checkbox" id="post-anonymous" class="sr-only peer">
             <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
           </label>
         </div>
 
-        <form id="post-form" class="space-y-4">
+        <form id="post-form" class="space-y-3 sm:space-y-4">
           <!-- 投稿者名（匿名ONで自動非表示） -->
           <div id="author-name-container">
-            <label class="block text-sm font-semibold text-slate-700 mb-1">お名前 / ニックネーム</label>
-            <input type="text" id="post-author" placeholder="例: 山田 太郎" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+            <label class="block text-xs sm:text-sm font-semibold text-slate-700 mb-1">お名前 / ニックネーム</label>
+            <input type="text" id="post-author" placeholder="例: 山田 太郎" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-base sm:text-sm">
           </div>
 
           <!-- タイトル -->
           <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-1">タイトル <span class="text-red-500">*</span></label>
-            <input type="text" id="post-title" required placeholder="例: このツールの使い方わかりにくい、職場の近くにいいごはん屋さんないかな" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+            <label class="block text-xs sm:text-sm font-semibold text-slate-700 mb-1">タイトル <span class="text-red-500">*</span></label>
+            <input type="text" id="post-title" required placeholder="例: このツールの使い方がわからない" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-base sm:text-sm">
           </div>
 
-          <!-- 一言メモ (100文字制限) -->
+          <!-- 一言メモ -->
           <div>
             <div class="flex justify-between items-center mb-1">
-              <label class="block text-sm font-semibold text-slate-700">わからないところ・一言メモ</label>
-              <span id="char-counter" class="text-xs text-slate-400">0 / 100文字</span>
+              <label class="block text-xs sm:text-sm font-semibold text-slate-700">わからないところ・一言メモ</label>
+              <span id="char-counter" class="text-[11px] sm:text-xs text-slate-400">0 / 100文字</span>
             </div>
-            <textarea id="post-memo" maxlength="100" rows="3" placeholder="「この行で怒られてる理由がわからない」「何から調べればいい？」など (100文字以内)" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm resize-none"></textarea>
+            <textarea id="post-memo" maxlength="100" rows="3" placeholder="「この行で怒られてる理由がわからない」など (100文字以内)" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-base sm:text-sm resize-none"></textarea>
           </div>
 
           <!-- スクショ・画像貼り付けエリア -->
           <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-1">スクリーンショット（Ctrl + V で貼り付け可）</label>
-            <div id="drop-area" class="border-2 border-dashed border-slate-300 rounded-xl p-5 text-center cursor-pointer hover:border-indigo-400 transition bg-slate-50 flex flex-col items-center justify-center min-h-[140px]">
+            <label class="block text-xs sm:text-sm font-semibold text-slate-700 mb-1">スクリーンショット・写真</label>
+            <div id="drop-area" class="border-2 border-dashed border-slate-300 rounded-xl p-4 text-center cursor-pointer hover:border-indigo-400 transition bg-slate-50 flex flex-col items-center justify-center min-h-[120px]">
               <div id="drop-prompt" class="space-y-1">
-                <span class="text-3xl block">📋</span>
-                <p class="text-xs text-slate-600 font-medium">ここにファイルをドロップ または クリックして選択</p>
-                <p class="text-[11px] text-slate-400">画面上で <kbd class="bg-white border rounded px-1">Ctrl + V</kbd> でも直接ペーストできます</p>
+                <span class="text-2xl sm:text-3xl block">📷</span>
+                <p class="text-xs text-slate-600 font-medium">タップして写真・画像を選択</p>
+                <p class="text-[10px] text-slate-400 hidden sm:block">PCではドラッグ＆ドロップや Ctrl + V でも貼り付け可</p>
               </div>
               <!-- プレビュー表示 -->
               <div id="image-preview-container" class="hidden relative w-full">
                 <img id="image-preview" src="" alt="プレビュー" class="max-h-48 mx-auto rounded-lg shadow-sm object-contain border">
-                <button type="button" id="btn-remove-image" class="absolute top-1 right-1 bg-black/60 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-black/80">✕</button>
+                <button type="button" id="btn-remove-image" class="absolute top-1 right-1 bg-black/60 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm hover:bg-black/80">✕</button>
               </div>
               <input type="file" id="file-input" accept="image/*" class="hidden">
             </div>
           </div>
 
           <!-- 投稿ボタン -->
-          <button type="submit" id="btn-submit" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition shadow-sm text-sm">
+          <button type="submit" id="btn-submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white font-bold rounded-lg transition shadow-sm text-sm">
             この内容で投稿する
           </button>
         </form>
       </div>
     </section>
 
-    <!-- タイムライン画面 (デフォルト表示) -->
-    <section id="view-timeline" class="space-y-4">
-      <!-- フィルタタブ -->
-      <div class="flex space-x-2 border-b border-slate-200 pb-2 text-sm font-medium">
-        <button data-filter="all" class="filter-tab px-3 py-1 rounded-lg text-indigo-600 bg-indigo-50 font-bold">すべて</button>
-        <button data-filter="unresolved" class="filter-tab px-3 py-1 rounded-lg text-slate-600 hover:bg-slate-100">未解決のみ</button>
-        <button data-filter="resolved" class="filter-tab px-3 py-1 rounded-lg text-slate-600 hover:bg-slate-100">解決済み</button>
+    <!-- タイムライン画面 -->
+    <section id="view-timeline" class="space-y-3 sm:space-y-4">
+      <!-- フィルタタブ (スマホで横にはみ出しても綺麗にスワイプ可能) -->
+      <div class="flex space-x-1.5 sm:space-x-2 border-b border-slate-200 pb-2 text-xs sm:text-sm font-medium overflow-x-auto no-scrollbar whitespace-nowrap py-1">
+        <button data-filter="all" class="filter-tab px-3 py-1.5 rounded-lg text-indigo-600 bg-indigo-50 font-bold shrink-0">すべて</button>
+        <button data-filter="unresolved" class="filter-tab px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-100 shrink-0">未解決のみ</button>
+        <button data-filter="resolved" class="filter-tab px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-100 shrink-0">解決済み</button>
+        <button data-filter="anonymous" class="filter-tab px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-100 shrink-0">🕶️ 匿名相談</button>
       </div>
 
       <!-- 投稿リスト一覧 -->
-      <div id="timeline-list" class="space-y-4"></div>
+      <div id="timeline-list" class="space-y-3 sm:space-y-4"></div>
     </section>
 
   </main>
 
   <!-- 画像拡大モーダル -->
-  <div id="image-modal" class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center p-4">
+  <div id="image-modal" class="fixed inset-0 bg-black/85 z-50 hidden flex items-center justify-center p-2 sm:p-4">
     <div class="relative max-w-4xl max-h-[90vh]">
       <img id="modal-img" src="" alt="拡大画像" class="max-w-full max-h-[85vh] rounded-lg object-contain">
-      <button id="btn-close-modal" class="absolute top-2 right-2 text-white bg-black/50 hover:bg-black/80 rounded-full w-8 h-8 flex items-center justify-center font-bold">✕</button>
+      <button id="btn-close-modal" class="absolute -top-3 -right-3 text-white bg-slate-800 hover:bg-slate-900 border border-slate-600 rounded-full w-9 h-9 flex items-center justify-center text-sm font-bold shadow-lg">✕</button>
     </div>
   </div>
 

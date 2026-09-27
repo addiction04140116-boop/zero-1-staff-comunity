@@ -1,3 +1,6 @@
+
+@charset "UTF-8";
+
 /* カスタムスクロールバーと補助スタイル */
 ::-webkit-scrollbar {
   width: 6px;
@@ -24,4 +27,46 @@
 .post-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+
+
+/* --- 全体リセット・快適化 --- */
+html, body {
+  -webkit-tap-highlight-color: transparent; /* スマホタップ時の青い枠線を消す */
+  touch-action: manipulation;               /* ダブルタップズームの誤作動を防止 */
+}
+
+/* --- スマホでフィルタタブのスクロールバーを隠す (no-scrollbar) --- */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* --- モバイル入力欄のズーム防止 (フォント16px強制) --- */
+@media screen and (max-width: 640px) {
+  input[type="text"],
+  textarea {
+    font-size: 16px !important; /* iOS Safariでフォーカス時に勝手に拡大されるのを防ぐ */
+  }
+}
+
+/* --- ドロップゾーンのアニメーション --- */
+#drop-area {
+  transition: all 0.2s ease-in-out;
+}
+
+/* --- カード・ボタンのアニメーション --- */
+.nav-btn,
+button {
+  transition: all 0.15s ease-in-out;
+}
+
+/* --- テキストの折り返し確実化 --- */
+p, h3, span {
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
